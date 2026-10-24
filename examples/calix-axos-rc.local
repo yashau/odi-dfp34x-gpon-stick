@@ -1,0 +1,29 @@
+#!/bin/sh
+# Persistent tweaks, started at boot by /etc/init.d/rc40.
+
+# Host interface (LAN SerDes) mode trial with auto-revert. LAN_SDS_MODE is
+# applied early in boot (rc3), so a new mode is tried by saving it to flash
+# and creating /var/config/sds_confirm. On that boot the new mode is already
+# live, but the saved value is put back to 3 (SGMII) so that, if the stick is
+# unreachable in the new mode, the next power cycle recovers it. Once the new
+# mode is confirmed working, save it again without the flag.
+# Modes: 1 = 1000BASE-X (firmware default, MikroTik SFP cage), 3 = SGMII MAC.
+if [ -f /var/config/sds_confirm ]; then
+	rm -f /var/config/sds_confirm
+	/etc/scripts/flash set LAN_SDS_MODE 3 >/dev/null 2>&1
+	/bin/mib commit >/dev/null 2>&1
+fi
+
+# The Calix OLT provisions a Dot1RateLimiter that this OMCI stack turns into
+# 0 kbps storm-control meters on the UNI (port 0) for broadcast, multicast and
+# unknown unicast. That silently drops WAN setup broadcasts (PPPoE PADI, DHCP
+# DISCOVER) and other traffic.
+# The OLT can re-provision at any time, so keep checking and switch them off.
+while true; do
+	for type in broadcast multicast unknown-unicast; do
+		if /bin/diag storm-control get $type port 0 2>/dev/null | /bin/grep -q "^0 *Enable"; then
+			/bin/diag storm-control set $type port 0 state disable >/dev/null 2>&1
+		fi
+	done
+	/bin/sleep 10
+done

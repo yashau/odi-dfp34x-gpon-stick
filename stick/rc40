@@ -1,0 +1,5 @@
+#!/bin/sh
+# custom boot hook: run persistent user script from the config partition
+if [ -f /var/config/rc.local ]; then
+	sh /var/config/rc.local > /dev/null 2>&1 &
+fi

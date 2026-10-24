@@ -1,0 +1,2 @@
+# Scripts run on the stick and in Linux containers: keep LF line endings.
+* text=auto eol=lf

@@ -1,0 +1,20 @@
+#!/bin/sh
+# Persistent tweaks, started at boot by /etc/init.d/rc40.
+# Install as /var/config/rc.local (chmod 755). Edit freely; no reflash needed.
+
+# Host interface (LAN SerDes) mode trial with auto-revert. LAN_SDS_MODE is
+# applied early in boot (rc3), so a new mode is tried by saving it to flash
+# and creating /var/config/sds_confirm. On that boot the new mode is already
+# live, but the saved value is put back to 3 (SGMII) so that, if the stick is
+# unreachable in the new mode, the next power cycle recovers it. Once the new
+# mode is confirmed working, save it again without the flag.
+# Modes: 1 = 1000BASE-X (firmware default, MikroTik SFP cage), 3 = SGMII MAC.
+if [ -f /var/config/sds_confirm ]; then
+	rm -f /var/config/sds_confirm
+	/etc/scripts/flash set LAN_SDS_MODE 3 >/dev/null 2>&1
+	/bin/mib commit >/dev/null 2>&1
+fi
+
+# Add your own boot-time tweaks below. Anything that must keep running (for
+# example re-applying a setting the OLT overwrites) should loop, see
+# examples/calix-axos-rc.local.
